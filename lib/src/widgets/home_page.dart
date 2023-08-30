@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class Example extends StatelessWidget {
-  Example({Key? key}) : super(key: key);
+  const Example({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: SafeArea(
         child: DataOwnerStatefull(),
       ),
@@ -14,16 +14,16 @@ class Example extends StatelessWidget {
 }
 
 class DataOwnerStatefull extends StatefulWidget {
-  DataOwnerStatefull({Key? key}) : super(key: key);
+  const DataOwnerStatefull({super.key});
 
   @override
   _DataOwnerStatefullState createState() => _DataOwnerStatefullState();
 }
 
 class _DataOwnerStatefullState extends State<DataOwnerStatefull> {
-  var _value = 0;
+  int _value = 0;
 
-  void _incriment() {
+  void _increment() {
     _value += 1;
     setState(() {});
   }
@@ -36,10 +36,13 @@ class _DataOwnerStatefullState extends State<DataOwnerStatefull> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           ElevatedButton(
-            onPressed: _incriment,
+            onPressed: _increment,
             child: const Text('Жми'),
           ),
-          DataConsumerStateless(),
+          DataProviderInherited(
+            value: _value,
+            child: const DataConsumerStateless(),
+          ),
         ],
       ),
     );
@@ -47,19 +50,17 @@ class _DataOwnerStatefullState extends State<DataOwnerStatefull> {
 }
 
 class DataConsumerStateless extends StatelessWidget {
-  DataConsumerStateless({Key? key}) : super(key: key);
+  const DataConsumerStateless({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final value =
-        context.findAncestorStateOfType<_DataOwnerStatefullState>()?._value ??
-            0;
+    final value = DataProviderInherited.of(context).value;
     return Container(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text('$value'),
-          DataConsumerStatefull(),
+          const DataConsumerStatefull(),
         ],
       ),
     );
@@ -67,7 +68,7 @@ class DataConsumerStateless extends StatelessWidget {
 }
 
 class DataConsumerStatefull extends StatefulWidget {
-  DataConsumerStatefull({Key? key}) : super(key: key);
+  const DataConsumerStatefull({super.key});
 
   @override
   _DataConsumerStatefullState createState() => _DataConsumerStatefullState();
@@ -76,9 +77,40 @@ class DataConsumerStatefull extends StatefulWidget {
 class _DataConsumerStatefullState extends State<DataConsumerStatefull> {
   @override
   Widget build(BuildContext context) {
-    final value =
-        context.findAncestorStateOfType<_DataOwnerStatefullState>()?._value ??
-            0;
+    final value = DataProviderInherited.of(context).value;
     return Text('$value');
   }
 }
+
+class DataProviderInherited extends InheritedWidget {
+  final int value;
+
+  const DataProviderInherited({
+    super.key,
+    required this.value,
+    required Widget child,
+  }) : super(child: child);
+
+  static DataProviderInherited of(BuildContext context) {
+    final DataProviderInherited? result =
+        context.dependOnInheritedWidgetOfExactType<DataProviderInherited>();
+    assert(result != null, 'No DataProviderInherited found in context');
+    return result!;
+  }
+
+  @override
+  bool updateShouldNotify(DataProviderInherited oldWidget) {
+    return value != oldWidget.value;
+  }
+}
+
+// T? getInherit<T>(BuildContext context) {
+//   final element =
+//       context.getElementForInheritedWidgetOfExactType<DataProviderInherited>();
+//   final widget = element?.widget;
+//   if (widget is T) {
+//     return widget as T;
+//   } else {
+//     return null;
+//   }
+// }
