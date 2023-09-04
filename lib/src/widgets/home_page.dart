@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Example extends StatelessWidget {
-  const Example({Key? key}) : super(key: key);
+  Example({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class _SimpleCalcWidgetState extends State<SimpleCalcWidget> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: SimpleCalcWidgetProvider(
+        child: ChangeNotifierProvider(
           model: _model,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -56,7 +56,8 @@ class FirstNumberWidget extends StatelessWidget {
     return TextField(
       decoration: const InputDecoration(border: OutlineInputBorder()),
       onChanged: (String value) =>
-          SimpleCalcWidgetProvider.of(context)?.firstNumber = value,
+          ChangeNotifierProvider.read<SimpleCalcWidgetModel>(context)
+              ?.firstNumber = value,
     );
   }
 }
@@ -69,7 +70,8 @@ class SecondNumberWidget extends StatelessWidget {
     return TextField(
       decoration: const InputDecoration(border: OutlineInputBorder()),
       onChanged: (String value) =>
-          SimpleCalcWidgetProvider.of(context)?.secondNumber = value,
+          ChangeNotifierProvider.read<SimpleCalcWidgetModel>(context)
+              ?.secondNumber = value,
     );
   }
 }
@@ -80,35 +82,22 @@ class SummButtonWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => SimpleCalcWidgetProvider.of(context)?.summ(),
+      onPressed: () =>
+          ChangeNotifierProvider.read<SimpleCalcWidgetModel>(context)?.summ(),
       child: const Text('Посчитать сумму'),
     );
   }
 }
 
-class ResultWidget extends StatefulWidget {
+class ResultWidget extends StatelessWidget {
   const ResultWidget({Key? key}) : super(key: key);
 
   @override
-  _ResultWidgetState createState() => _ResultWidgetState();
-}
-
-class _ResultWidgetState extends State<ResultWidget> {
-  String? _result;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final model = SimpleCalcWidgetProvider.of(context);
-    model?.addListener(() {
-      _result = model.summResult.toString();
-      setState(() {});
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Text('Результат: ${_result ?? '-1'}');
+    final value = ChangeNotifierProvider.watch<SimpleCalcWidgetModel>(context)
+            ?.summResult ??
+        '-1';
+    return Text('Результат: $value');
   }
 }
 
@@ -125,29 +114,38 @@ class SimpleCalcWidgetModel extends ChangeNotifier {
     if (_firstNumber != null && _secondNumber != null) {
       summResult = _firstNumber! + _secondNumber!;
     } else {
-      summResult = null;
+      summResult = -1;
     }
     notifyListeners();
   }
 }
 
-class SimpleCalcWidgetProvider extends InheritedWidget {
-  final SimpleCalcWidgetModel model;
-
-  const SimpleCalcWidgetProvider({
+class ChangeNotifierProvider<T extends ChangeNotifier>
+    extends InheritedNotifier<T> {
+  ChangeNotifierProvider({
     Key? key,
-    required this.model,
+    required T model,
     required Widget child,
-  }) : super(key: key, child: child);
+  }) : super(
+          key: key,
+          notifier: model,
+          child: child,
+        );
 
-  static SimpleCalcWidgetModel? of(BuildContext context) {
+  static T? watch<T extends ChangeNotifier>(BuildContext context) {
     return context
-        .dependOnInheritedWidgetOfExactType<SimpleCalcWidgetProvider>()
-        ?.model;
+        .dependOnInheritedWidgetOfExactType<ChangeNotifierProvider<T>>()
+        ?.notifier;
   }
 
-  @override
-  bool updateShouldNotify(SimpleCalcWidgetProvider oldWidget) {
-    return model != oldWidget.model;
+  static T? read<T extends ChangeNotifier>(BuildContext context) {
+    final widget = context
+        .getElementForInheritedWidgetOfExactType<ChangeNotifierProvider<T>>()
+        ?.widget;
+    if (widget is ChangeNotifierProvider<T>) {
+      return widget.notifier;
+    } else {
+      return null;
+    }
   }
 }
