@@ -7,119 +7,147 @@ class Example extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: SafeArea(
-        child: DataOwnerStatefull(),
+        child: SimpleCalcWidget(),
       ),
     );
   }
 }
 
-class DataOwnerStatefull extends StatefulWidget {
-  const DataOwnerStatefull({Key? key}) : super(key: key);
+class SimpleCalcWidget extends StatefulWidget {
+  const SimpleCalcWidget({Key? key}) : super(key: key);
 
   @override
-  _DataOwnerStatefullState createState() => _DataOwnerStatefullState();
+  _SimpleCalcWidgetState createState() => _SimpleCalcWidgetState();
 }
 
-class _DataOwnerStatefullState extends State<DataOwnerStatefull> {
-  var _valueOne = 0;
-  var _valueTwo = 0;
-
-  void _incrimentOne() {
-    _valueOne += 1;
-    setState(() {});
-  }
-
-  void _incrimentTwo() {
-    _valueTwo += 1;
-    setState(() {});
-  }
+class _SimpleCalcWidgetState extends State<SimpleCalcWidget> {
+  final _model = SimpleCalcWidgetModel();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        ElevatedButton(
-          onPressed: _incrimentOne,
-          child: const Text('Жми раз'),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+        child: SimpleCalcWidgetProvider(
+          model: _model,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const FirstNumberWidget(),
+              const SizedBox(height: 10),
+              const SecondNumberWidget(),
+              const SizedBox(height: 10),
+              const SummButtonWidget(),
+              const SizedBox(height: 10),
+              const ResultWidget(),
+            ],
+          ),
         ),
-        ElevatedButton(
-          onPressed: _incrimentTwo,
-          child: const Text('Жми два'),
-        ),
-        DataProviderInherited(
-          valueOne: _valueOne,
-          valueTwo: _valueTwo,
-          child: const DataConsumerStateless(),
-        ),
-      ],
-    );
-  }
-}
-
-class DataConsumerStateless extends StatelessWidget {
-  const DataConsumerStateless({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text('${DataProviderInherited.of(context, 'one')?.valueOne ?? 0}'),
-          const DataConsumerStatefull(),
-        ],
       ),
     );
   }
 }
 
-class DataConsumerStatefull extends StatefulWidget {
-  const DataConsumerStatefull({Key? key}) : super(key: key);
+class FirstNumberWidget extends StatelessWidget {
+  const FirstNumberWidget({Key? key}) : super(key: key);
 
-  @override
-  _DataConsumerStatefullState createState() => _DataConsumerStatefullState();
-}
-
-class _DataConsumerStatefullState extends State<DataConsumerStatefull> {
   @override
   Widget build(BuildContext context) {
-    return Text('${DataProviderInherited.of(context, 'two')?.valueTwo ?? 0}');
+    return TextField(
+      decoration: const InputDecoration(border: OutlineInputBorder()),
+      onChanged: (String value) =>
+          SimpleCalcWidgetProvider.of(context)?.firstNumber = value,
+    );
   }
 }
 
-class DataProviderInherited extends InheritedModel<String> {
-  final int valueOne;
-  final int valueTwo;
+class SecondNumberWidget extends StatelessWidget {
+  const SecondNumberWidget({Key? key}) : super(key: key);
 
-  const DataProviderInherited({
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      decoration: const InputDecoration(border: OutlineInputBorder()),
+      onChanged: (String value) =>
+          SimpleCalcWidgetProvider.of(context)?.secondNumber = value,
+    );
+  }
+}
+
+class SummButtonWidget extends StatelessWidget {
+  const SummButtonWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () => SimpleCalcWidgetProvider.of(context)?.summ(),
+      child: const Text('Посчитать сумму'),
+    );
+  }
+}
+
+class ResultWidget extends StatefulWidget {
+  const ResultWidget({Key? key}) : super(key: key);
+
+  @override
+  _ResultWidgetState createState() => _ResultWidgetState();
+}
+
+class _ResultWidgetState extends State<ResultWidget> {
+  String? _result;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final model = SimpleCalcWidgetProvider.of(context);
+    model?.addListener(() {
+      _result = model.summResult.toString();
+      setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('Результат: ${_result ?? '-1'}');
+  }
+}
+
+class SimpleCalcWidgetModel extends ChangeNotifier {
+  int? _firstNumber;
+  int? _secondNumber;
+  int? summResult;
+
+  set firstNumber(String value) => _firstNumber = int.tryParse(value);
+
+  set secondNumber(String value) => _secondNumber = int.tryParse(value);
+
+  void summ() {
+    if (_firstNumber != null && _secondNumber != null) {
+      summResult = _firstNumber! + _secondNumber!;
+    } else {
+      summResult = null;
+    }
+    notifyListeners();
+  }
+}
+
+class SimpleCalcWidgetProvider extends InheritedWidget {
+  final SimpleCalcWidgetModel model;
+
+  const SimpleCalcWidgetProvider({
     Key? key,
-    required this.valueOne,
-    required this.valueTwo,
+    required this.model,
     required Widget child,
   }) : super(key: key, child: child);
 
-  static DataProviderInherited? of(BuildContext context, String aspect) {
-    return context.dependOnInheritedWidgetOfExactType<DataProviderInherited>(
-      aspect: aspect,
-    );
+  static SimpleCalcWidgetModel? of(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<SimpleCalcWidgetProvider>()
+        ?.model;
   }
 
   @override
-  bool updateShouldNotify(DataProviderInherited oldWidget) {
-    return valueOne != oldWidget.valueOne || valueTwo != oldWidget.valueTwo;
-  }
-
-  @override
-  bool updateShouldNotifyDependent(
-    covariant DataProviderInherited oldWidget,
-    Set<String> aspects,
-  ) {
-    final isFirstAspectShouldUpdated =
-        valueOne != oldWidget.valueOne && aspects.contains('one');
-    final isSecondAspectShouldUpdated =
-        valueTwo != oldWidget.valueTwo && aspects.contains('two');
-
-    return isFirstAspectShouldUpdated || isSecondAspectShouldUpdated;
+  bool updateShouldNotify(SimpleCalcWidgetProvider oldWidget) {
+    return model != oldWidget.model;
   }
 }
