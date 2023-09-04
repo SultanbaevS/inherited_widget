@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Example extends StatelessWidget {
-  const Example({super.key});
+  const Example({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,52 +14,59 @@ class Example extends StatelessWidget {
 }
 
 class DataOwnerStatefull extends StatefulWidget {
-  const DataOwnerStatefull({super.key});
+  const DataOwnerStatefull({Key? key}) : super(key: key);
 
   @override
   _DataOwnerStatefullState createState() => _DataOwnerStatefullState();
 }
 
 class _DataOwnerStatefullState extends State<DataOwnerStatefull> {
-  int _value = 0;
+  var _valueOne = 0;
+  var _valueTwo = 0;
 
-  void _increment() {
-    _value += 1;
+  void _incrimentOne() {
+    _valueOne += 1;
+    setState(() {});
+  }
+
+  void _incrimentTwo() {
+    _valueTwo += 1;
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ElevatedButton(
-            onPressed: _increment,
-            child: const Text('Жми'),
-          ),
-          DataProviderInherited(
-            value: _value,
-            child: const DataConsumerStateless(),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        ElevatedButton(
+          onPressed: _incrimentOne,
+          child: const Text('Жми раз'),
+        ),
+        ElevatedButton(
+          onPressed: _incrimentTwo,
+          child: const Text('Жми два'),
+        ),
+        DataProviderInherited(
+          valueOne: _valueOne,
+          valueTwo: _valueTwo,
+          child: const DataConsumerStateless(),
+        ),
+      ],
     );
   }
 }
 
 class DataConsumerStateless extends StatelessWidget {
-  const DataConsumerStateless({super.key});
+  const DataConsumerStateless({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final value = DataProviderInherited.of(context).value;
     return Container(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text('$value'),
+          Text('${DataProviderInherited.of(context, 'one')?.valueOne ?? 0}'),
           const DataConsumerStatefull(),
         ],
       ),
@@ -68,7 +75,7 @@ class DataConsumerStateless extends StatelessWidget {
 }
 
 class DataConsumerStatefull extends StatefulWidget {
-  const DataConsumerStatefull({super.key});
+  const DataConsumerStatefull({Key? key}) : super(key: key);
 
   @override
   _DataConsumerStatefullState createState() => _DataConsumerStatefullState();
@@ -77,40 +84,42 @@ class DataConsumerStatefull extends StatefulWidget {
 class _DataConsumerStatefullState extends State<DataConsumerStatefull> {
   @override
   Widget build(BuildContext context) {
-    final value = DataProviderInherited.of(context).value;
-    return Text('$value');
+    return Text('${DataProviderInherited.of(context, 'two')?.valueTwo ?? 0}');
   }
 }
 
-class DataProviderInherited extends InheritedWidget {
-  final int value;
+class DataProviderInherited extends InheritedModel<String> {
+  final int valueOne;
+  final int valueTwo;
 
   const DataProviderInherited({
-    super.key,
-    required this.value,
+    Key? key,
+    required this.valueOne,
+    required this.valueTwo,
     required Widget child,
-  }) : super(child: child);
+  }) : super(key: key, child: child);
 
-  static DataProviderInherited of(BuildContext context) {
-    final DataProviderInherited? result =
-        context.dependOnInheritedWidgetOfExactType<DataProviderInherited>();
-    assert(result != null, 'No DataProviderInherited found in context');
-    return result!;
+  static DataProviderInherited? of(BuildContext context, String aspect) {
+    return context.dependOnInheritedWidgetOfExactType<DataProviderInherited>(
+      aspect: aspect,
+    );
   }
 
   @override
   bool updateShouldNotify(DataProviderInherited oldWidget) {
-    return value != oldWidget.value;
+    return valueOne != oldWidget.valueOne || valueTwo != oldWidget.valueTwo;
+  }
+
+  @override
+  bool updateShouldNotifyDependent(
+    covariant DataProviderInherited oldWidget,
+    Set<String> aspects,
+  ) {
+    final isFirstAspectShouldUpdated =
+        valueOne != oldWidget.valueOne && aspects.contains('one');
+    final isSecondAspectShouldUpdated =
+        valueTwo != oldWidget.valueTwo && aspects.contains('two');
+
+    return isFirstAspectShouldUpdated || isSecondAspectShouldUpdated;
   }
 }
-
-// T? getInherit<T>(BuildContext context) {
-//   final element =
-//       context.getElementForInheritedWidgetOfExactType<DataProviderInherited>();
-//   final widget = element?.widget;
-//   if (widget is T) {
-//     return widget as T;
-//   } else {
-//     return null;
-//   }
-// }
